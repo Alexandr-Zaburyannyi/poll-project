@@ -58,7 +58,7 @@ describe('Advanced Integration Tests', () => {
     const pollResult = pollService.createPoll('Test Poll', 'Test Description');
     expect(pollResult).toEqual({ id: 1 });
     expect(db.prepare).toHaveBeenCalledWith(
-      'INSERT INTO polls (title, description, is_active) VALUES (?, ?, ?)'
+      'INSERT INTO polls (title, description, is_active, created_by) VALUES (?, ?, ?, ?)'
     );
 
     const option1Result = optionService.createOption(pollResult.id, 'Option 1');
@@ -81,7 +81,7 @@ describe('Advanced Integration Tests', () => {
 
   it('should handle database errors when creating a poll', () => {
     const mockError = new Error('Database error');
-    db.prepare().run.mockImplementation(() => {
+    db.prepare().run.mockImplementationOnce(() => {
       throw mockError;
     });
 

@@ -1,8 +1,10 @@
 /** @format */
 const optionController = require('../../src/controllers/optionController');
 const optionService = require('../../src/services/optionService');
+const pollService = require('../../src/services/pollService');
 
 jest.mock('../../src/services/optionService');
+jest.mock('../../src/services/pollService');
 
 describe('OptionController', () => {
   let mockRequest;
@@ -31,10 +33,14 @@ describe('OptionController', () => {
   describe('create', () => {
     it('should create an option and return 201 status', () => {
       mockRequest.body = { poll_id: 1, text: 'Option Text' };
+      mockRequest.user = { id: 'user123' };
+
+      pollService.getPollById.mockReturnValue({ id: 1, created_by: 'user123' });
       optionService.createOption.mockReturnValue({ id: 1 });
 
       optionController.create(mockRequest, mockResponse);
 
+      expect(pollService.getPollById).toHaveBeenCalledWith(1);
       expect(optionService.createOption).toHaveBeenCalledWith(1, 'Option Text');
       expect(mockResponse.status).toHaveBeenCalledWith(201);
       expect(mockResponse.json).toHaveBeenCalledWith({ id: 1 });
@@ -42,6 +48,9 @@ describe('OptionController', () => {
 
     it('should handle errors and return 500 status', () => {
       mockRequest.body = { poll_id: 1, text: 'Option Text' };
+      mockRequest.user = { id: 'user123' };
+
+      pollService.getPollById.mockReturnValue({ id: 1, created_by: 'user123' });
       const error = new Error('Database error');
       optionService.createOption.mockImplementation(() => {
         throw error;
@@ -130,10 +139,19 @@ describe('OptionController', () => {
     it('should update an option and return success status', () => {
       mockRequest.params.id = '1';
       mockRequest.body = { poll_id: 1, text: 'Updated Option' };
+      mockRequest.user = { id: 'user123' };
+
+      optionService.getOptionById.mockReturnValue({ id: 1, poll_id: 1 });
+      const mockPoll = { id: 1, created_by: 'user123' };
+      const pollService = require('../../src/services/pollService');
+      jest.mock('../../src/services/pollService');
+      pollService.getPollById = jest.fn().mockReturnValue(mockPoll);
+
       optionService.updateOption.mockReturnValue({ updated: true });
 
       optionController.update(mockRequest, mockResponse);
 
+      expect(optionService.getOptionById).toHaveBeenCalledWith('1');
       expect(optionService.updateOption).toHaveBeenCalledWith(
         '1',
         1,
@@ -145,15 +163,11 @@ describe('OptionController', () => {
     it('should return 404 if option to update is not found', () => {
       mockRequest.params.id = '999';
       mockRequest.body = { poll_id: 1, text: 'Updated Option' };
-      optionService.updateOption.mockReturnValue({ updated: false });
+      optionService.getOptionById.mockReturnValue(null);
 
       optionController.update(mockRequest, mockResponse);
 
-      expect(optionService.updateOption).toHaveBeenCalledWith(
-        '999',
-        1,
-        'Updated Option'
-      );
+      expect(optionService.getOptionById).toHaveBeenCalledWith('999');
       expect(mockResponse.status).toHaveBeenCalledWith(404);
       expect(mockResponse.json).toHaveBeenCalledWith({
         error: 'Option not found',
@@ -164,7 +178,8 @@ describe('OptionController', () => {
       mockRequest.params.id = '1';
       mockRequest.body = { poll_id: 1, text: 'Updated Option' };
       const error = new Error('Database error');
-      optionService.updateOption.mockImplementation(() => {
+
+      optionService.getOptionById.mockImplementation(() => {
         throw error;
       });
 
@@ -180,21 +195,29 @@ describe('OptionController', () => {
   describe('delete', () => {
     it('should delete an option and return success status', () => {
       mockRequest.params.id = '1';
+      mockRequest.user = { id: 'user123' };
+
+      optionService.getOptionById.mockReturnValue({ id: 1, poll_id: 1 });
+      const mockPoll = { id: 1, created_by: 'user123' };
+      const pollService = require('../../src/services/pollService');
+      pollService.getPollById = jest.fn().mockReturnValue(mockPoll);
+
       optionService.deleteOption.mockReturnValue({ deleted: true });
 
       optionController.delete(mockRequest, mockResponse);
 
+      expect(optionService.getOptionById).toHaveBeenCalledWith('1');
       expect(optionService.deleteOption).toHaveBeenCalledWith('1');
       expect(mockResponse.json).toHaveBeenCalledWith({ deleted: true });
     });
 
     it('should return 404 if option to delete is not found', () => {
       mockRequest.params.id = '999';
-      optionService.deleteOption.mockReturnValue({ deleted: false });
+      optionService.getOptionById.mockReturnValue(null);
 
       optionController.delete(mockRequest, mockResponse);
 
-      expect(optionService.deleteOption).toHaveBeenCalledWith('999');
+      expect(optionService.getOptionById).toHaveBeenCalledWith('999');
       expect(mockResponse.status).toHaveBeenCalledWith(404);
       expect(mockResponse.json).toHaveBeenCalledWith({
         error: 'Option not found',
@@ -203,8 +226,10 @@ describe('OptionController', () => {
 
     it('should handle errors and return 500 status', () => {
       mockRequest.params.id = '1';
+      mockRequest.user = { id: 'user123' };
       const error = new Error('Database error');
-      optionService.deleteOption.mockImplementation(() => {
+
+      optionService.getOptionById.mockImplementation(() => {
         throw error;
       });
 

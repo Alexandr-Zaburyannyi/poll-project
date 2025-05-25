@@ -15,6 +15,9 @@ describe('VoteController', () => {
     mockRequest = {
       body: {},
       params: {},
+      user: {
+        id: 'test-user-id',
+      },
     };
 
     mockResponse = {
@@ -30,18 +33,18 @@ describe('VoteController', () => {
 
   describe('create', () => {
     it('should create a vote and return 201 status', () => {
-      mockRequest.body = { option_id: 1, voter_id: 'user123' };
+      mockRequest.body = { option_id: 1 };
       voteService.createVote.mockReturnValue({ id: 1 });
 
       voteController.create(mockRequest, mockResponse);
 
-      expect(voteService.createVote).toHaveBeenCalledWith(1, 'user123');
+      expect(voteService.createVote).toHaveBeenCalledWith(1, 'test-user-id');
       expect(mockResponse.status).toHaveBeenCalledWith(201);
       expect(mockResponse.json).toHaveBeenCalledWith({ id: 1 });
     });
 
     it('should handle errors and return 500 status', () => {
-      mockRequest.body = { option_id: 1, voter_id: 'user123' };
+      mockRequest.body = { option_id: 1 };
       const error = new Error('Database error');
       voteService.createVote.mockImplementation(() => {
         throw error;
@@ -129,23 +132,31 @@ describe('VoteController', () => {
   describe('update', () => {
     it('should update a vote and return success status', () => {
       mockRequest.params.id = '1';
-      mockRequest.body = { option_id: 2, voter_id: 'user123' };
+      mockRequest.body = { option_id: 2 };
       voteService.updateVote.mockReturnValue({ updated: true });
 
       voteController.update(mockRequest, mockResponse);
 
-      expect(voteService.updateVote).toHaveBeenCalledWith('1', 2, 'user123');
+      expect(voteService.updateVote).toHaveBeenCalledWith(
+        '1',
+        2,
+        'test-user-id'
+      );
       expect(mockResponse.json).toHaveBeenCalledWith({ updated: true });
     });
 
     it('should return 404 if vote to update is not found', () => {
       mockRequest.params.id = '999';
-      mockRequest.body = { option_id: 2, voter_id: 'user123' };
+      mockRequest.body = { option_id: 2 };
       voteService.updateVote.mockReturnValue({ updated: false });
 
       voteController.update(mockRequest, mockResponse);
 
-      expect(voteService.updateVote).toHaveBeenCalledWith('999', 2, 'user123');
+      expect(voteService.updateVote).toHaveBeenCalledWith(
+        '999',
+        2,
+        'test-user-id'
+      );
       expect(mockResponse.status).toHaveBeenCalledWith(404);
       expect(mockResponse.json).toHaveBeenCalledWith({
         error: 'Vote not found',
@@ -154,7 +165,7 @@ describe('VoteController', () => {
 
     it('should handle errors and return 500 status', () => {
       mockRequest.params.id = '1';
-      mockRequest.body = { option_id: 2, voter_id: 'user123' };
+      mockRequest.body = { option_id: 2 };
       const error = new Error('Database error');
       voteService.updateVote.mockImplementation(() => {
         throw error;
@@ -172,21 +183,26 @@ describe('VoteController', () => {
   describe('delete', () => {
     it('should delete a vote and return success status', () => {
       mockRequest.params.id = '1';
+      voteService.getVoteById.mockReturnValue({
+        id: 1,
+        voter_id: 'test-user-id',
+      });
       voteService.deleteVote.mockReturnValue({ deleted: true });
 
       voteController.delete(mockRequest, mockResponse);
 
+      expect(voteService.getVoteById).toHaveBeenCalledWith('1');
       expect(voteService.deleteVote).toHaveBeenCalledWith('1');
       expect(mockResponse.json).toHaveBeenCalledWith({ deleted: true });
     });
 
     it('should return 404 if vote to delete is not found', () => {
       mockRequest.params.id = '999';
-      voteService.deleteVote.mockReturnValue({ deleted: false });
+      voteService.getVoteById.mockReturnValue(null);
 
       voteController.delete(mockRequest, mockResponse);
 
-      expect(voteService.deleteVote).toHaveBeenCalledWith('999');
+      expect(voteService.getVoteById).toHaveBeenCalledWith('999');
       expect(mockResponse.status).toHaveBeenCalledWith(404);
       expect(mockResponse.json).toHaveBeenCalledWith({
         error: 'Vote not found',
@@ -196,7 +212,7 @@ describe('VoteController', () => {
     it('should handle errors and return 500 status', () => {
       mockRequest.params.id = '1';
       const error = new Error('Database error');
-      voteService.deleteVote.mockImplementation(() => {
+      voteService.getVoteById.mockImplementation(() => {
         throw error;
       });
 

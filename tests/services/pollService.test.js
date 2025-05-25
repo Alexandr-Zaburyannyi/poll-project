@@ -1,6 +1,8 @@
 /** @format */
 const pollService = require('../../src/services/pollService');
 
+// No need to mock Math.round, it's a built-in function
+
 jest.mock('../../src/db/setup', () => {
   const mockPrepare = jest.fn();
   const mockRun = jest.fn();
@@ -35,13 +37,14 @@ describe('PollService', () => {
       const result = pollService.createPoll('Test Poll', 'Test Description', 1);
 
       expect(db.prepare).toHaveBeenCalledWith(
-        'INSERT INTO polls (title, description, is_active) VALUES (?, ?, ?)'
+        'INSERT INTO polls (title, description, is_active, created_by) VALUES (?, ?, ?, ?)'
       );
 
       expect(db.prepare().run).toHaveBeenCalledWith(
         'Test Poll',
         'Test Description',
-        1
+        1,
+        null
       );
 
       expect(result).toEqual({ id: 1 });

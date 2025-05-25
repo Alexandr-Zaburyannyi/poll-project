@@ -2,6 +2,19 @@
 const request = require('supertest');
 const express = require('express');
 
+// Mock the auth middleware first
+jest.mock('../../src/middleware/auth', () => ({
+  isAuthenticated: (req, res, next) => {
+    // Mock user object to simulate authentication
+    req.user = {
+      id: 'test-user-id',
+      email: 'test@example.com',
+      name: 'Test User',
+    };
+    return next();
+  },
+}));
+
 jest.mock('../../src/controllers/pollController', () => ({
   create: jest.fn((req, res) => res.status(201).json({ id: 1 })),
   getAll: jest.fn((req, res) => res.json([{ id: 1, title: 'Test Poll' }])),

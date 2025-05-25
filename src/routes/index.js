@@ -12,7 +12,7 @@ const router = express.Router();
 // Home page
 router.get('/', homeController.getHomePage);
 
-// Public routes (if any)
+// Public routes
 router.get('/polls', pollController.getAll);
 router.get('/polls/:id', pollController.getById);
 router.get('/polls/:id/results', pollController.getResults);

@@ -15,6 +15,9 @@ describe('PollController', () => {
     mockRequest = {
       body: {},
       params: {},
+      user: {
+        id: 'test-user-id',
+      },
     };
 
     mockResponse = {
@@ -42,7 +45,8 @@ describe('PollController', () => {
       expect(pollService.createPoll).toHaveBeenCalledWith(
         'New Poll',
         'Description',
-        1
+        1,
+        'test-user-id'
       );
       expect(mockResponse.status).toHaveBeenCalledWith(201);
       expect(mockResponse.json).toHaveBeenCalledWith({ id: 1 });
@@ -147,10 +151,16 @@ describe('PollController', () => {
         description: 'Updated Description',
         is_active: 0,
       };
+
+      pollService.getPollById.mockReturnValue({
+        id: 1,
+        created_by: 'test-user-id',
+      });
       pollService.updatePoll.mockReturnValue({ updated: true });
 
       pollController.update(mockRequest, mockResponse);
 
+      expect(pollService.getPollById).toHaveBeenCalledWith('1');
       expect(pollService.updatePoll).toHaveBeenCalledWith(
         '1',
         'Updated Poll',
@@ -167,16 +177,11 @@ describe('PollController', () => {
         description: 'Updated Description',
         is_active: 0,
       };
-      pollService.updatePoll.mockReturnValue({ updated: false });
+      pollService.getPollById.mockReturnValue(null);
 
       pollController.update(mockRequest, mockResponse);
 
-      expect(pollService.updatePoll).toHaveBeenCalledWith(
-        '999',
-        'Updated Poll',
-        'Updated Description',
-        0
-      );
+      expect(pollService.getPollById).toHaveBeenCalledWith('999');
       expect(mockResponse.status).toHaveBeenCalledWith(404);
       expect(mockResponse.json).toHaveBeenCalledWith({
         error: 'Poll not found',
@@ -191,7 +196,7 @@ describe('PollController', () => {
         is_active: 0,
       };
       const error = new Error('Database error');
-      pollService.updatePoll.mockImplementation(() => {
+      pollService.getPollById.mockImplementation(() => {
         throw error;
       });
 
@@ -207,21 +212,26 @@ describe('PollController', () => {
   describe('delete', () => {
     it('should delete a poll and return success status', () => {
       mockRequest.params.id = '1';
+      pollService.getPollById.mockReturnValue({
+        id: 1,
+        created_by: 'test-user-id',
+      });
       pollService.deletePoll.mockReturnValue({ deleted: true });
 
       pollController.delete(mockRequest, mockResponse);
 
+      expect(pollService.getPollById).toHaveBeenCalledWith('1');
       expect(pollService.deletePoll).toHaveBeenCalledWith('1');
       expect(mockResponse.json).toHaveBeenCalledWith({ deleted: true });
     });
 
     it('should return 404 if poll to delete is not found', () => {
       mockRequest.params.id = '999';
-      pollService.deletePoll.mockReturnValue({ deleted: false });
+      pollService.getPollById.mockReturnValue(null);
 
       pollController.delete(mockRequest, mockResponse);
 
-      expect(pollService.deletePoll).toHaveBeenCalledWith('999');
+      expect(pollService.getPollById).toHaveBeenCalledWith('999');
       expect(mockResponse.status).toHaveBeenCalledWith(404);
       expect(mockResponse.json).toHaveBeenCalledWith({
         error: 'Poll not found',
@@ -231,7 +241,7 @@ describe('PollController', () => {
     it('should handle errors and return 500 status', () => {
       mockRequest.params.id = '1';
       const error = new Error('Database error');
-      pollService.deletePoll.mockImplementation(() => {
+      pollService.getPollById.mockImplementation(() => {
         throw error;
       });
 
