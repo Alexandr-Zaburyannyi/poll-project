@@ -2,11 +2,11 @@
 const db = require('../db/setup');
 
 class PollService {
-  createPoll(title, description, is_active = 1) {
+  createPoll(title, description, is_active = 1, created_by = null) {
     const stmt = db.prepare(
-      'INSERT INTO polls (title, description, is_active) VALUES (?, ?, ?)'
+      'INSERT INTO polls (title, description, is_active, created_by) VALUES (?, ?, ?, ?)'
     );
-    const info = stmt.run(title, description, is_active);
+    const info = stmt.run(title, description, is_active, created_by);
     return { id: info.lastInsertRowid };
   }
 

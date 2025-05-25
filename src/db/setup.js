@@ -15,12 +15,22 @@ if (!fs.existsSync(dbDir)) {
 const db = new Database(dbPath);
 
 db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    email TEXT UNIQUE,
+    name TEXT,
+    picture TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
   CREATE TABLE IF NOT EXISTS polls (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
     description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_active BOOLEAN DEFAULT 1
+    is_active BOOLEAN DEFAULT 1,
+    created_by TEXT,
+    FOREIGN KEY (created_by) REFERENCES users(id)
   );
 
   CREATE TABLE IF NOT EXISTS options (
@@ -35,7 +45,8 @@ db.exec(`
     option_id INTEGER,
     voter_id TEXT,
     voted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (option_id) REFERENCES options(id) ON DELETE CASCADE
+    FOREIGN KEY (option_id) REFERENCES options(id) ON DELETE CASCADE,
+    FOREIGN KEY (voter_id) REFERENCES users(id)
   );
 `);
 

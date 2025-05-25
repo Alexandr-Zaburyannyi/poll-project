@@ -4,8 +4,15 @@ const pollService = require('../services/pollService');
 class PollController {
   create(req, res) {
     const { title, description, is_active } = req.body;
+    const created_by = req.user.id;
+
     try {
-      const result = pollService.createPoll(title, description, is_active ?? 1);
+      const result = pollService.createPoll(
+        title,
+        description,
+        is_active ?? 1,
+        created_by
+      );
       res.status(201).json(result);
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -34,14 +41,23 @@ class PollController {
   update(req, res) {
     const { title, description, is_active } = req.body;
     try {
+      const poll = pollService.getPollById(req.params.id);
+      if (!poll) {
+        return res.status(404).json({ error: 'Poll not found' });
+      }
+
+      if (poll.created_by && poll.created_by !== req.user.id) {
+        return res
+          .status(403)
+          .json({ error: 'Unauthorized to update this poll' });
+      }
+
       const result = pollService.updatePoll(
         req.params.id,
         title,
         description,
         is_active
       );
-      if (!result.updated)
-        return res.status(404).json({ error: 'Poll not found' });
       res.json(result);
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -50,9 +66,18 @@ class PollController {
 
   delete(req, res) {
     try {
-      const result = pollService.deletePoll(req.params.id);
-      if (!result.deleted)
+      const poll = pollService.getPollById(req.params.id);
+      if (!poll) {
         return res.status(404).json({ error: 'Poll not found' });
+      }
+
+      if (poll.created_by && poll.created_by !== req.user.id) {
+        return res
+          .status(403)
+          .json({ error: 'Unauthorized to delete this poll' });
+      }
+
+      const result = pollService.deletePoll(req.params.id);
       res.json(result);
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -74,5 +99,7 @@ class PollController {
     }
   }
 }
+
+module.exports = new PollController();
 
 module.exports = new PollController();
