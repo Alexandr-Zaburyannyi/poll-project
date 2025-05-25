@@ -58,6 +58,21 @@ class PollController {
       res.status(500).json({ error: err.message });
     }
   }
+
+  getResults(req, res) {
+    try {
+      const pollId = req.params.id;
+      const results = pollService.getPollResults(pollId);
+
+      if (!results) {
+        return res.status(404).json({ error: 'Poll not found' });
+      }
+
+      res.json(results);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  }
 }
 
 module.exports = new PollController();

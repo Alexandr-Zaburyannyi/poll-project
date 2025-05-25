@@ -11,6 +11,7 @@ const router = express.Router();
 router.post('/polls', pollController.create);
 router.get('/polls', pollController.getAll);
 router.get('/polls/:id', pollController.getById);
+router.get('/polls/:id/results', pollController.getResults);
 router.put('/polls/:id', pollController.update);
 router.delete('/polls/:id', pollController.delete);
 

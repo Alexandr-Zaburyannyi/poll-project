@@ -152,4 +152,197 @@ describe('PollService', () => {
       expect(result).toEqual({ deleted: false });
     });
   });
+
+  describe('getPollResults', () => {
+    it('should return null if poll does not exist', () => {
+      db.prepare().get.mockReturnValueOnce(null);
+
+      const result = pollService.getPollResults(999);
+
+      expect(db.prepare).toHaveBeenCalledWith(
+        'SELECT * FROM polls WHERE id = ?'
+      );
+      expect(db.prepare().get).toHaveBeenCalledWith(999);
+      expect(result).toBeNull();
+    });
+
+    it('should return poll with empty options array if no options exist', () => {
+      const mockPoll = {
+          id: 1,
+          title: 'Test Poll',
+          description: 'Test Description',
+          is_active: 1,
+        },
+        mockOptions = [];
+      db.prepare().get.mockReturnValueOnce(mockPoll);
+      db.prepare().all.mockReturnValueOnce(mockOptions);
+
+      const result = pollService.getPollResults(1);
+
+      expect(db.prepare).toHaveBeenCalledWith(
+        'SELECT * FROM polls WHERE id = ?'
+      );
+      expect(db.prepare().get).toHaveBeenCalledWith(1);
+      expect(db.prepare).toHaveBeenCalledWith(
+        'SELECT id, text FROM options WHERE poll_id = ?'
+      );
+      expect(db.prepare().all).toHaveBeenCalledWith(1);
+      expect(result).toEqual({ poll: mockPoll, options: [] });
+    });
+
+    it('should return poll with options having zero votes when no votes exist', () => {
+      const mockPoll = {
+          id: 1,
+          title: 'Test Poll',
+          description: 'Test Description',
+          is_active: 1,
+        },
+        mockOptions = [
+          { id: 1, text: 'Option 1' },
+          { id: 2, text: 'Option 2' },
+        ];
+
+      db.prepare().get.mockReturnValueOnce(mockPoll);
+      db.prepare().all.mockReturnValueOnce(mockOptions);
+      db.prepare().get.mockReturnValueOnce({ total: 0 });
+
+      const result = pollService.getPollResults(1);
+
+      expect(db.prepare).toHaveBeenCalledWith(
+        'SELECT * FROM polls WHERE id = ?'
+      );
+      expect(db.prepare().get).toHaveBeenCalledWith(1);
+      expect(db.prepare).toHaveBeenCalledWith(
+        'SELECT id, text FROM options WHERE poll_id = ?'
+      );
+      expect(db.prepare().all).toHaveBeenCalledWith(1);
+
+      expect(result).toEqual({
+        poll: mockPoll,
+        options: [
+          { id: 1, text: 'Option 1', votes: 0, percentage: 0 },
+          { id: 2, text: 'Option 2', votes: 0, percentage: 0 },
+        ],
+        totalVotes: 0,
+      });
+    });
+
+    it('should return poll with options and vote counts/percentages', () => {
+      const mockPoll = {
+          id: 1,
+          title: 'Test Poll',
+          description: 'Test Description',
+          is_active: 1,
+        },
+        mockOptions = [
+          { id: 1, text: 'Option 1' },
+          { id: 2, text: 'Option 2' },
+        ];
+
+      db.prepare().get.mockReturnValueOnce(mockPoll);
+      db.prepare().all.mockReturnValueOnce(mockOptions);
+      db.prepare().get.mockReturnValueOnce({ total: 10 });
+
+      db.prepare().get.mockReturnValueOnce({ count: 7 });
+
+      db.prepare().get.mockReturnValueOnce({ count: 3 });
+
+      const result = pollService.getPollResults(1);
+
+      expect(db.prepare).toHaveBeenCalledWith(
+        'SELECT * FROM polls WHERE id = ?'
+      );
+      expect(db.prepare().get).toHaveBeenCalledWith(1);
+      expect(db.prepare).toHaveBeenCalledWith(
+        'SELECT id, text FROM options WHERE poll_id = ?'
+      );
+      expect(db.prepare().all).toHaveBeenCalledWith(1);
+
+      expect(result).toEqual({
+        poll: mockPoll,
+        options: [
+          { id: 1, text: 'Option 1', votes: 7, percentage: 70 },
+          { id: 2, text: 'Option 2', votes: 3, percentage: 30 },
+        ],
+        totalVotes: 10,
+      });
+    });
+
+    it('should handle case where total votes query returns undefined', () => {
+      const mockPoll = {
+          id: 1,
+          title: 'Test Poll',
+          description: 'Test Description',
+          is_active: 1,
+        },
+        mockOptions = [
+          { id: 1, text: 'Option 1' },
+          { id: 2, text: 'Option 2' },
+        ];
+
+      db.prepare().get.mockReturnValueOnce(mockPoll);
+      db.prepare().all.mockReturnValueOnce(mockOptions);
+      db.prepare().get.mockReturnValueOnce(undefined);
+
+      const result = pollService.getPollResults(1);
+
+      expect(result).toEqual({
+        poll: mockPoll,
+        options: [
+          { id: 1, text: 'Option 1', votes: 0, percentage: 0 },
+          { id: 2, text: 'Option 2', votes: 0, percentage: 0 },
+        ],
+        totalVotes: 0,
+      });
+    });
+
+    it('should handle case where vote count query returns undefined', () => {
+      const mockPoll = {
+          id: 1,
+          title: 'Test Poll',
+          description: 'Test Description',
+          is_active: 1,
+        },
+        mockOptions = [{ id: 1, text: 'Option 1' }];
+
+      db.prepare().get.mockReturnValueOnce(mockPoll);
+      db.prepare().all.mockReturnValueOnce(mockOptions);
+      db.prepare().get.mockReturnValueOnce({ total: 10 });
+
+      db.prepare().get.mockReturnValueOnce(undefined);
+
+      const result = pollService.getPollResults(1);
+
+      expect(result).toEqual({
+        poll: mockPoll,
+        options: [{ id: 1, text: 'Option 1', votes: 0, percentage: 0 }],
+        totalVotes: 10,
+      });
+    });
+
+    it('should handle case where vote percentage is calculated correctly for zero total votes', () => {
+      const mockPoll = {
+        id: 1,
+        title: 'Test Poll',
+        description: 'Test Description',
+        is_active: 1,
+      };
+      const mockOptions = [{ id: 1, text: 'Option 1' }];
+
+      db.prepare().get.mockReturnValueOnce(mockPoll);
+      db.prepare().all.mockReturnValueOnce(mockOptions);
+
+      db.prepare().get.mockReturnValueOnce({ total: 0 });
+
+      db.prepare().get.mockReturnValueOnce({ count: 0 });
+
+      const result = pollService.getPollResults(1);
+
+      expect(result).toEqual({
+        poll: mockPoll,
+        options: [{ id: 1, text: 'Option 1', votes: 0, percentage: 0 }],
+        totalVotes: 0,
+      });
+    });
+  });
 });
